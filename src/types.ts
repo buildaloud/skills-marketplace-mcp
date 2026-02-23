@@ -57,6 +57,7 @@ export interface AuditResult {
   auditor: string;
   summary: string;
   capabilities: string[];
+  useCases?: string[];
   scores: AuditScores;
   findings: AuditFinding[];
   notDetected: string[];

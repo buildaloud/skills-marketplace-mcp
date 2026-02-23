@@ -30,19 +30,30 @@ if (!PINECONE_API_KEY) {
 
 function buildEmbedText(skill: SkillWithAudit): string {
   const { metadata, audit } = skill;
+
+  // Lead with name + full description
   const parts = [
-    `${metadata.name} — ${metadata.description}`,
-    '',
-    'Capabilities:',
-    ...audit.capabilities.map((c) => `- ${c}`),
+    metadata.name,
+    metadata.description,
   ];
-  if (audit.findings.length > 0) {
-    parts.push('', 'Security findings:');
-    for (const f of audit.findings) {
-      parts.push(`- ${f.type} (${f.severity}): ${f.description}`);
-    }
+
+  // useCases: imperative "use when" phrases — primary search signal when present.
+  // These are action-verb-first and name specific services/protocols directly.
+  if (audit.useCases && audit.useCases.length > 0) {
+    parts.push('', 'Use when you need to: ' + audit.useCases.join(' | '));
   }
-  parts.push('', `Language: ${metadata.language ?? 'unknown'} | Author: ${metadata.author} | Stars: ${metadata.stars}`);
+
+  // Fallback: first 4 capabilities truncated (audit prose, less precise but better than nothing)
+  const caps = audit.capabilities.slice(0, 4).map((c) => c.slice(0, 80));
+  if (caps.length > 0) {
+    parts.push('', caps.join(' | '));
+  }
+
+  // Language is a useful discriminator (agents often query by stack)
+  if (metadata.language) {
+    parts.push('', `Language: ${metadata.language}`);
+  }
+
   return parts.join('\n');
 }
 
