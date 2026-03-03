@@ -155,14 +155,15 @@ describe('get_skill', () => {
     expect(text).toContain('Overall Exposure');
   });
 
-  it('returns "No skill found" when fetchSkill returns null', async () => {
+  it('returns upsell message when fetchSkill returns null (free tier)', async () => {
     vi.mocked(fetchSkill).mockResolvedValue(null);
 
     const client = await createTestClient();
     const result = await client.callTool({ name: 'get_skill', arguments: { slug: 'nonexistent--skill' } });
     const text = (result.content as Array<{ type: string; text: string }>)[0].text;
 
-    expect(text).toContain('No skill found');
+    expect(text).toContain("hasn't been audited yet");
+    expect(text).toContain('Pro plan');
   });
 });
 

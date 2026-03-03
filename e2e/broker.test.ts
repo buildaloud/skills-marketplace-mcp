@@ -57,14 +57,14 @@ describe('E2E — live broker at https://mcp.buildaloud.ai', () => {
     expect(text).toContain('context-engineering-collection');
   });
 
-  it('get_skill with unknown slug returns "No skill found"', async () => {
+  it('get_skill with unknown slug returns upsell message', async () => {
     const client = await createLiveClient();
     const result = await client.callTool({
       name: 'get_skill',
       arguments: { slug: 'this-does-not-exist--fake' },
     });
     const text = (result.content as Array<{ type: string; text: string }>)[0].text;
-    expect(text).toContain('No skill found');
+    expect(text).toContain("hasn't been audited yet");
   });
 
   it('search_skills returns at least one result for "fetch web pages"', async () => {
