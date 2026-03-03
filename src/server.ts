@@ -4,6 +4,7 @@ import { fetchSkill, fetchSkills } from './lib/skills-api.js';
 import { semanticSearch } from './lib/pinecone.js';
 import { getDangerLevel } from './lib/danger-level.js';
 import { buildInstallConfig } from './lib/install-config.js';
+import { triggerAudit } from './lib/audit-trigger.js';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -48,7 +49,8 @@ export function createMcpServer(): McpServer {
     async ({ slug }) => {
       const skill = await fetchSkill(slug);
       if (!skill) {
-        return { content: [{ type: 'text', text: `No skill found with slug: ${slug}` }] };
+        const trigger = await triggerAudit(slug);
+        return { content: [{ type: 'text', text: trigger.message }] };
       }
       const { metadata, audit } = skill;
       const dangerLevel = getDangerLevel(audit.scores.overallExposure);
@@ -133,7 +135,8 @@ export function createMcpServer(): McpServer {
     async ({ slug }) => {
       const skill = await fetchSkill(slug);
       if (!skill) {
-        return { content: [{ type: 'text', text: `No skill found with slug: ${slug}` }] };
+        const trigger = await triggerAudit(slug);
+        return { content: [{ type: 'text', text: trigger.message }] };
       }
       const config = buildInstallConfig(skill);
       return { content: [{ type: 'text', text: JSON.stringify(config, null, 2) }] };
