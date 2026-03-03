@@ -2,10 +2,33 @@
 import express from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpServer } from './server.js';
+import { validateApiKey } from './lib/redis-client.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+// Extend Express Request to carry auth tier
+declare global {
+  namespace Express {
+    interface Request {
+      authTier?: 'pro' | 'free';
+    }
+  }
+}
 
 const app = express();
 app.use(express.json());
+
+// Auth middleware — validate Bearer token, attach tier to request
+app.use(async (req, _res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const key = authHeader.slice(7).trim();
+    const record = await validateApiKey(key);
+    req.authTier = record ? 'pro' : 'free';
+  } else {
+    req.authTier = 'free';
+  }
+  next();
+});
 
 // Session registry — each MCP session gets its own server + transport pair
 const sessions = new Map<string, { server: McpServer; transport: StreamableHTTPServerTransport }>();
@@ -21,7 +44,7 @@ app.post('/mcp', async (req, res) => {
   }
 
   // New session — create server + transport, register them
-  const server = createMcpServer();
+  const server = createMcpServer({ tier: req.authTier ?? 'free' });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     onsessioninitialized: (sid) => {

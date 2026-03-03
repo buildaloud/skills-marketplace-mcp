@@ -6,7 +6,8 @@ import { getDangerLevel } from './lib/danger-level.js';
 import { buildInstallConfig } from './lib/install-config.js';
 import { triggerAudit } from './lib/audit-trigger.js';
 
-export function createMcpServer(): McpServer {
+export function createMcpServer(options: { tier: 'pro' | 'free' } = { tier: 'free' }): McpServer {
+  const { tier } = options;
   const server = new McpServer({
     name: 'skills-marketplace',
     version: '0.1.0',
@@ -49,8 +50,11 @@ export function createMcpServer(): McpServer {
     async ({ slug }) => {
       const skill = await fetchSkill(slug);
       if (!skill) {
-        const trigger = await triggerAudit(slug);
-        return { content: [{ type: 'text', text: trigger.message }] };
+        if (tier === 'pro') {
+          const trigger = await triggerAudit(slug);
+          return { content: [{ type: 'text', text: trigger.message }] };
+        }
+        return { content: [{ type: 'text', text: `Skill \`${slug}\` hasn't been audited yet. On-demand audits are available on the Pro plan — see https://marketplace.buildaloud.ai/pricing` }] };
       }
       const { metadata, audit } = skill;
       const dangerLevel = getDangerLevel(audit.scores.overallExposure);
@@ -135,8 +139,11 @@ export function createMcpServer(): McpServer {
     async ({ slug }) => {
       const skill = await fetchSkill(slug);
       if (!skill) {
-        const trigger = await triggerAudit(slug);
-        return { content: [{ type: 'text', text: trigger.message }] };
+        if (tier === 'pro') {
+          const trigger = await triggerAudit(slug);
+          return { content: [{ type: 'text', text: trigger.message }] };
+        }
+        return { content: [{ type: 'text', text: `Skill \`${slug}\` hasn't been audited yet. On-demand audits are available on the Pro plan — see https://marketplace.buildaloud.ai/pricing` }] };
       }
       const config = buildInstallConfig(skill);
       return { content: [{ type: 'text', text: JSON.stringify(config, null, 2) }] };
