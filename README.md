@@ -8,13 +8,22 @@ Hosted broker: `https://mcp.marketplace.buildaloud.ai/mcp`
 
 ## Quick start
 
-Add the hosted broker to your MCP client:
+The broker speaks standard MCP over streamable HTTP, so any MCP client works.
+Same URL for both:
+
+**Claude Code:**
 
 ```bash
-claude mcp add skills-marketplace --url https://mcp.marketplace.buildaloud.ai/mcp
+claude mcp add --transport http skills-marketplace https://mcp.marketplace.buildaloud.ai/mcp
 ```
 
-Or configure it manually:
+**Codex:**
+
+```bash
+codex mcp add skills-marketplace --url https://mcp.marketplace.buildaloud.ai/mcp
+```
+
+Manual config, Claude Code (`.mcp.json`):
 
 ```json
 {
@@ -24,6 +33,13 @@ Or configure it manually:
     }
   }
 }
+```
+
+Manual config, Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.skills-marketplace]
+url = "https://mcp.marketplace.buildaloud.ai/mcp"
 ```
 
 The endpoint speaks the MCP streamable-HTTP transport. A client must send an

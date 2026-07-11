@@ -16,7 +16,7 @@ Connects your Claude session to the Skills Marketplace — a catalog of MCP skil
 ## How to add this skill to your Claude session
 
 ```bash
-claude mcp add skills-marketplace --url https://mcp.marketplace.buildaloud.ai/mcp
+claude mcp add --transport http skills-marketplace https://mcp.marketplace.buildaloud.ai/mcp
 ```
 
 Or add to your MCP config manually:
