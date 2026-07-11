@@ -1,0 +1,22 @@
+{
+  "name": "skills-marketplace",
+  "owner": {
+    "name": "Build Aloud",
+    "url": "https://github.com/buildaloud"
+  },
+  "plugins": [
+    {
+      "name": "skills-marketplace",
+      "description": "Semantic search + security audits for MCP skills. Wires up the hosted Build Aloud broker so your agent can search, inspect, and install vetted skills.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Build Aloud"
+      },
+      "homepage": "https://marketplace.buildaloud.ai",
+      "source": {
+        "source": "github",
+        "repo": "buildaloud/skills-marketplace-mcp"
+      }
+    }
+  ]
+}

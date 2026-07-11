@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "skills-marketplace": {
+      "type": "http",
+      "url": "https://mcp.marketplace.buildaloud.ai/mcp"
+    }
+  }
+}

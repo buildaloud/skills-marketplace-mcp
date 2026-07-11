@@ -6,36 +6,39 @@ catalog.
 
 Hosted broker: `https://mcp.marketplace.buildaloud.ai/mcp`
 
-## Quick start
+## Install
 
-The broker speaks standard MCP over streamable HTTP, so any MCP client works.
-Same URL for both:
+Install as a plugin (recommended — you get version updates). Same repo works in
+both Claude Code and Codex:
 
 **Claude Code:**
 
-```bash
-claude mcp add --transport http skills-marketplace https://mcp.marketplace.buildaloud.ai/mcp
+```
+/plugin marketplace add buildaloud/skills-marketplace-mcp
+/plugin install skills-marketplace@skills-marketplace
 ```
 
 **Codex:**
 
 ```bash
+codex plugin marketplace add buildaloud/skills-marketplace-mcp
+codex plugin add skills-marketplace@skills-marketplace
+```
+
+To update later: `/plugin marketplace update skills-marketplace` (Claude) or
+`codex plugin marketplace upgrade` (Codex).
+
+### Or add the MCP server directly
+
+The broker is standard MCP over streamable HTTP, so you can skip the plugin and
+point any client at the URL:
+
+```bash
+claude mcp add --transport http skills-marketplace https://mcp.marketplace.buildaloud.ai/mcp
 codex mcp add skills-marketplace --url https://mcp.marketplace.buildaloud.ai/mcp
 ```
 
-Manual config, Claude Code (`.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "skills-marketplace": {
-      "url": "https://mcp.marketplace.buildaloud.ai/mcp"
-    }
-  }
-}
-```
-
-Manual config, Codex (`~/.codex/config.toml`):
+Codex manual config (`~/.codex/config.toml`):
 
 ```toml
 [mcp_servers.skills-marketplace]
