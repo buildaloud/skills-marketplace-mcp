@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
-const BROKER_URL = 'https://mcp.buildaloud.ai';
+const BROKER_URL = 'https://mcp.marketplace.buildaloud.ai';
 const MCP_URL = `${BROKER_URL}/mcp`;
 
 async function createLiveClient(): Promise<Client> {
@@ -12,7 +12,7 @@ async function createLiveClient(): Promise<Client> {
   return client;
 }
 
-describe('E2E — live broker at https://mcp.buildaloud.ai', () => {
+describe('E2E — live broker at https://mcp.marketplace.buildaloud.ai', () => {
   it('health endpoint returns ok: true', async () => {
     const res = await fetch(`${BROKER_URL}/health`);
     expect(res.ok).toBe(true);
