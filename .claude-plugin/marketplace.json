@@ -13,10 +13,7 @@
         "name": "Build Aloud"
       },
       "homepage": "https://marketplace.buildaloud.ai",
-      "source": {
-        "source": "github",
-        "repo": "buildaloud/skills-marketplace-mcp"
-      }
+      "source": "./plugins/skills-marketplace"
     }
   ]
 }
