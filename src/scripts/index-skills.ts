@@ -13,7 +13,7 @@
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
-import { fetchSkills, fetchSkill } from '../lib/skills-api.js';
+import { fetchAllSkills } from '../lib/skills-api.js';
 import { getDangerLevel } from '../lib/danger-level.js';
 import type { SkillWithAudit } from '../types.js';
 
@@ -21,7 +21,26 @@ const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_INDEX   = process.env.PINECONE_INDEX ?? 'skills-marketplace';
 const EMBEDDING_MODEL  = 'multilingual-e5-large';
 const BATCH_SIZE       = 96; // stay under Pinecone's 100-record limit
+const BATCH_DELAY_MS   = 12_000; // pace under the 250k tokens/min embedding limit
 const REINDEX          = process.argv.includes('--reindex');
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Retry upserts on Pinecone's 429 (rate limit) with a wait past the 1-min window.
+async function upsertWithRetry(index: any, records: unknown[], attempt = 1): Promise<void> {
+  try {
+    await index.upsertRecords({ records } as any);
+  } catch (err: any) {
+    const is429 = err?.status === 429 || String(err?.message ?? '').includes('RESOURCE_EXHAUSTED');
+    if (is429 && attempt <= 5) {
+      const wait = 65_000;
+      console.log(`  rate-limited (429), waiting ${wait / 1000}s then retrying (attempt ${attempt})...`);
+      await sleep(wait);
+      return upsertWithRetry(index, records, attempt + 1);
+    }
+    throw err;
+  }
+}
 
 if (!PINECONE_API_KEY) {
   console.error('PINECONE_API_KEY is required');
@@ -80,15 +99,16 @@ async function main() {
 
   const index = pc.index(PINECONE_INDEX);
 
-  // Load all skill summaries to get slugs
-  console.log('Fetching skill list from marketplace API...');
-  const { skills: summaries, total } = await fetchSkills({ limit: 500 });
-  console.log(`Found ${total} skills.`);
+  // One bulk read off the static asset — full audit detail for every skill, no
+  // per-slug fetches (which 503 on CF's CPU limit), no 500-row cap.
+  console.log('Fetching full skill catalog from marketplace bulk asset...');
+  const all = await fetchAllSkills();
+  console.log(`Found ${all.length} skills.`);
 
   // Determine which are already indexed
-  let existingSlugs = new Set<string>();
+  const existingSlugs = new Set<string>();
   if (!REINDEX) {
-    const allSlugs = summaries.map((s) => s.slug);
+    const allSlugs = all.map((s) => s.metadata.slug);
     for (let i = 0; i < allSlugs.length; i += BATCH_SIZE) {
       const batch = allSlugs.slice(i, i + BATCH_SIZE);
       const fetched = await index.fetch({ ids: batch });
@@ -99,41 +119,34 @@ async function main() {
     console.log(`${existingSlugs.size} already indexed. Skipping those.`);
   }
 
-  const toIndex = summaries.filter((s) => REINDEX || !existingSlugs.has(s.slug));
+  const toIndex = all.filter((s) => REINDEX || !existingSlugs.has(s.metadata.slug));
   console.log(`Indexing ${toIndex.length} skills...`);
 
   let indexed = 0;
   for (let i = 0; i < toIndex.length; i += BATCH_SIZE) {
     const batch = toIndex.slice(i, i + BATCH_SIZE);
 
-    // Fetch full audit for each skill in the batch
-    const records: Array<Record<string, unknown>> = [];
-    for (const summary of batch) {
-      const skill = await fetchSkill(summary.slug);
-      if (!skill) {
-        console.warn(`  Skipping ${summary.slug} — not found in API`);
-        continue;
-      }
-      records.push({
-        id: skill.metadata.slug,
-        embed_text: buildEmbedText(skill),
-        name: skill.metadata.name,
-        author: skill.metadata.author,
-        description: skill.metadata.description.slice(0, 300),
-        language: skill.metadata.language ?? '',
-        stars: skill.metadata.stars,
-        category: skill.metadata.category ?? '',
-        overallExposure: skill.audit.scores.overallExposure,
-        maliciousIntent: skill.audit.scores.maliciousIntent,
-        dangerLevel: getDangerLevel(skill.audit.scores.overallExposure),
-      });
-    }
+    const records = batch.map((skill) => ({
+      id: skill.metadata.slug,
+      embed_text: buildEmbedText(skill),
+      name: skill.metadata.name,
+      author: skill.metadata.author,
+      description: skill.metadata.description.slice(0, 300),
+      language: skill.metadata.language ?? '',
+      stars: skill.metadata.stars,
+      category: skill.metadata.category ?? '',
+      overallExposure: skill.audit.scores.overallExposure,
+      maliciousIntent: skill.audit.scores.maliciousIntent,
+      dangerLevel: getDangerLevel(skill.audit.scores.overallExposure),
+    }));
 
-    if (records.length > 0) {
-      await index.upsertRecords({ records } as any);
-      indexed += records.length;
-      console.log(`[${indexed}/${toIndex.length}] Indexed up to ${batch[batch.length - 1].slug}`);
-    }
+    await upsertWithRetry(index, records);
+    indexed += records.length;
+    console.log(`[${indexed}/${toIndex.length}] Indexed up to ${batch[batch.length - 1].metadata.slug}`);
+
+    // Pace under Pinecone's integrated-embedding rate limit (free tier: 250k
+    // tokens/min for multilingual-e5-large). ~12s/batch keeps us well under.
+    if (i + BATCH_SIZE < toIndex.length) await sleep(BATCH_DELAY_MS);
   }
 
   console.log(`\nDone. ${indexed} skills indexed into "${PINECONE_INDEX}".`);

@@ -16,6 +16,16 @@ export async function fetchSkills(filters: SkillFilters = {}): Promise<SkillList
   return res.json() as Promise<SkillListResponse>;
 }
 
+// Full catalog in one shot, straight off the static bulk asset (no Function, no
+// per-slug 503). Used by the offline indexer — never the request path.
+export async function fetchAllSkills(): Promise<SkillWithAudit[]> {
+  const url = `${BASE}/_data/skills.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Bulk skills fetch error: ${res.status} ${res.statusText}`);
+  const data = (await res.json()) as { skills: SkillWithAudit[] };
+  return data.skills;
+}
+
 export async function fetchSkill(slug: string): Promise<SkillWithAudit | null> {
   const url = `${BASE}/api/skills/${encodeURIComponent(slug)}`;
   const res = await fetch(url);
